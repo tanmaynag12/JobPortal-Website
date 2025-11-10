@@ -1,17 +1,18 @@
 import express from "express";
 import { login, logout, register, updateProfile } from "../controllers/user.controller.js";
 import isAuthenticated from "../middlewares/isAuthenticated.js";
-import { upload } from "../middlewares/multer.js";
+import upload from "../middlewares/multer.js";
+
  
 const router = express.Router();
 
-// 1. Use upload.single("profilePhoto")
+
 router.route("/register").post(upload.single("profilePhoto"), register);
 
 router.route("/login").post(login);
 router.route("/logout").get(logout);
 
-// 2. Use upload.single("resume") for the other route
+
 router.route("/profile/update").post(isAuthenticated, upload.single("resume"), updateProfile);
 
 export default router;

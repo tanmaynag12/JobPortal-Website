@@ -1,100 +1,101 @@
+import mongoose from "mongoose";
 import { Company } from "../models/company.model.js";
 import getDataUri from "../utils/datauri.js";
 import cloudinary from "../utils/cloudinary.js";
 
-export const registerCompany = async (req, res) => {
-    try {
-        const { companyName } = req.body;
-        if (!companyName) {
-            return res.status(400).json({
-                message: "Company name is required.",
-                success: false
-            });
-        }
-        let company = await Company.findOne({ name: companyName });
-        if (company) {
-            return res.status(400).json({
-                message: "You can't register same company.",
-                success: false
-            })
-        };
-        company = await Company.create({
-            name: companyName,
-            userId: req.id
-        });
+export const registerCompany = async (req, res, next) => {
+  try {
+    console.log("--- New Company Registration Attempt ---");
+    console.log("1. Request Body:", req.body);
+    console.log("2. Request ID (from auth):", req.id);
 
-        return res.status(201).json({
-            message: "Company registered successfully.",
-            company,
-            success: true
-        })
-    } catch (error) {
-        console.log(error);
+    const { name } = req.body;
+    if (!name) {
+
+      console.log("3. Validation FAILED: Company name is missing.");
+      return res.status(400).json({ success: false, message: "Company name is required" });
     }
-}
-export const getCompany = async (req, res) => {
-    try {
-        const userId = req.id; // logged in user id
-        const companies = await Company.find({ userId });
-        if (!companies) {
-            return res.status(404).json({
-                message: "Companies not found.",
-                success: false
-            })
-        }
-        return res.status(200).json({
-            companies,
-            success:true
-        })
-    } catch (error) {
-        console.log(error);
+
+    const existing = await Company.findOne({ name });
+    if (existing) {
+      console.log("3. Validation FAILED: Company already exists.");
+      return res.status(400).json({ success: false, message: "Company already exists" });
     }
-}
-// get company by id
-export const getCompanyById = async (req, res) => {
-    try {
-        const companyId = req.params.id;
-        const company = await Company.findById(companyId);
-        if (!company) {
-            return res.status(404).json({
-                message: "Company not found.",
-                success: false
-            })
-        }
-        return res.status(200).json({
-            company,
-            success: true
-        })
-    } catch (error) {
-        console.log(error);
-    }
-}
-export const updateCompany = async (req, res) => {
-    try {
-        const { name, description, website, location } = req.body;
- 
-        const file = req.file;
-       
-        const fileUri = getDataUri(file);
-        const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
-        const logo = cloudResponse.secure_url;
+
+    const company = await Company.create({ name, userId: req.id });
+
+    console.log("3. SUCCESS: Company created.");
+    return res.status(201).json({ success: true, message: "Company registered successfully", company });
     
-        const updateData = { name, description, website, location, logo };
+  } catch (err) {
+    console.error("3. REGISTRATION CATCH BLOCK ERROR:", err);
+    return next(err);
+  }
+};
 
-        const company = await Company.findByIdAndUpdate(req.params.id, updateData, { new: true });
 
-        if (!company) {
-            return res.status(404).json({
-                message: "Company not found.",
-                success: false
-            })
-        }
-        return res.status(200).json({
-            message:"Company information updated.",
-            success:true
-        })
+export const getCompany = async (req, res, next) => {
+  try {
+    const userId = req.id;
+    const companies = await Company.find({ userId });
+    return res.status(200).json({ success: true, companies });
+  } catch (err) {
+    return next(err);
+  }
+};
 
-    } catch (error) {
-        console.log(error);
+
+export const getCompanyById = async (req, res, next) => {
+  try {
+    const companyId = req.params.id;
+    if (!mongoose.isValidObjectId(companyId)) {
+      return res.status(400).json({ success: false, message: "Invalid company id" });
     }
-}
+    const company = await Company.findById(companyId);
+    if (!company) {
+      return res.status(404).json({ success: false, message: "Company not found" });
+    }
+    return res.status(200).json({ success: true, company });
+  } catch (err) {
+    return next(err);
+  }
+};
+export const updateCompany = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: "Invalid company id" });
+    }
+
+    const allowed = ["name", "description", "website", "location"];
+    const updateData = {};
+    for (const k of allowed) if (req.body?.[k]) updateData[k] = req.body[k];
+
+    if (req.file) {
+      const fileUri = getDataUri(req.file);
+      const uploaded = await cloudinary.uploader.upload(fileUri.content);
+      updateData.logo = uploaded.secure_url;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ success: false, message: "No fields to update" });
+    }
+
+    const company = await Company.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!company) {
+      return res.status(404).json({ success: false, message: "Company not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Company information updated",
+      company,
+    });
+  } catch (err) {
+    return next(err);
+  }
+};

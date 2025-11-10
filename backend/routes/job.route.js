@@ -1,12 +1,24 @@
 import express from "express";
 import isAuthenticated from "../middlewares/isAuthenticated.js";
-import { getAdminJobs, getAllJobs, getJobById, postJob } from "../controllers/job.controller.js";
+import {
+  postJob,
+  listOpenJobs,
+  getJobById,
+  getAdminJobs,
+} from "../controllers/job.controller.js";
 
 const router = express.Router();
 
-router.route("/post").post(isAuthenticated, postJob);
-router.route("/get").get(isAuthenticated, getAllJobs);
-router.route("/getadminjobs").get(isAuthenticated, getAdminJobs);
-router.route("/get/:id").get(isAuthenticated, getJobById);
+// create job (auth)
+router.post("/create", isAuthenticated, postJob);
+
+// public jobs feed (no auth)
+router.get("/public", listOpenJobs);
+
+// admin jobs list (auth)
+router.get("/admin/list", isAuthenticated, getAdminJobs);
+
+// job by id (no auth for students browsing)
+router.get("/:id", getJobById);
 
 export default router;
