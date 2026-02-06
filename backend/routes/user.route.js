@@ -13,6 +13,6 @@ router.route("/login").post(login);
 router.route("/logout").get(logout);
 
 
-router.route("/profile/update").post(isAuthenticated, upload.single("resume"), updateProfile);
+router.route("/profile/update").post(isAuthenticated, upload.single("file"), updateProfile);
 
 export default router;
