@@ -24,7 +24,7 @@ export const register = async (req, res) => {
         if (req.file) { 
             const file = req.file;
             const fileUri = getDataUri(file); // This is now safe
-            cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+            cloudResponse =await cloudinary.uploader.upload(fileUri.content, { resource_type: "auto" });
         }
         // --- END FIX ---
 
