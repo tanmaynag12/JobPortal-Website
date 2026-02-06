@@ -73,7 +73,7 @@ export const updateCompany = async (req, res, next) => {
 
     if (req.file) {
       const fileUri = getDataUri(req.file);
-      const uploaded = await cloudinary.uploader.upload(fileUri.content);
+      const uploaded = await cloudinary.uploader.upload(fileUri.content, { resource_type: "auto" });
       updateData.logo = uploaded.secure_url;
     }
 
